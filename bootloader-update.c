@@ -47,10 +47,13 @@ static const char str_no_file[]    PROGMEM = "blupdate.bin not found!";
 static const char str_reading[]    PROGMEM = "     Reading blupdate.bin";
 static const char str_writing[]    PROGMEM = "     Writing page 0x";
 
+static const char str_fail[]       PROGMEM = "     Verification failed";
+
 static const char str_finished_1[] PROGMEM = "      Finished updating!";
 
-static const char str_buttons_1[]  PROGMEM = "        Continue /   Exit";
+static const char str_buttons_1[]  PROGMEM = "       Continue /   Reset";
 static const char str_buttons_2[]  PROGMEM = "             Reset";
+static const char str_buttons_3[]  PROGMEM = "        Retry /   Reset";
 
 sdc_struct_t sd_struct;
 u8 sd_buf[512];
@@ -107,8 +110,8 @@ int main() {
     Print(0, 15, str_warning_2);
     Print(0, 16, str_warning_3);
     Print(0, 25, str_buttons_1);
-    SetTile(6, 25, 1);
-    SetTile(19, 25, 2);
+    SetTile(5, 25, 1);
+    SetTile(18, 25, 2);
 
     // wait for user to make a choice
     while(1) {
@@ -136,6 +139,7 @@ int main() {
 
     // write new bootloader to flash
     for (uint16_t flash_page = 0xF0; flash_page < 0xFF; flash_page++) {
+        retry:
         // fill buffer with file contents for this page
         for (uint16_t byte = 0; byte < 256; byte++) {
             update_buf[byte] = SpiRamReadU8(0, byte+((flash_page-0xF0)*256));
@@ -152,6 +156,26 @@ int main() {
             "r" (flash_page) :
             "r0", "r1", "r25", "r26", "r27", "r30", "r31"
         );
+        // verify that the data was written successfully, ask to retry on failure
+        for (uint16_t byte = 0; byte < 256; byte++) {
+            if (update_buf[byte] != pgm_read_byte(byte+(flash_page*256))) {
+                Print(0, 13, str_fail);
+                Print(0, 25, str_buttons_3);
+                SetTile(6, 25, 1);
+                SetTile(16, 25, 2);
+                while(1) {
+                    btn = ReadJoypad(0);
+                    if (btn & BTN_A) {
+                        ClearVram();
+                        Print(0, 12, str_writing);
+                        goto retry;
+                    }
+                    if (btn & BTN_B) {
+                        SoftReset();
+                    }
+                }
+            }
+        }
     }
 
     ClearVram();
