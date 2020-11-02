@@ -7,7 +7,8 @@ External SPIRAM is required
 
 If needed, this can also be used to downgrade to lower V.5.0.xx versions
 
-The current version has no form of error checking, if something goes wrong while flashing then your Uzebox will be left in an undefined state  
+A very basic form of error recovery is available, if verification fails then it will ask to retry  
+If this fails then your Uzebox will be left in an undefined state  
 It is *not* possible for a Uzebox to be permanently bricked as a result of using this utility, a hardware flasher can always be used
 
 ## Usage
